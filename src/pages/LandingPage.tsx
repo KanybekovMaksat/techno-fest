@@ -1,144 +1,98 @@
-import { useState } from "react"
-import { supabase } from "@/lib/supabase"
-
-const EVENTS = [
+const events = [
     {
         id: "hackathon",
         icon: "⚡",
         name: "Хакатон",
-        desc: "Разработка инновационных IT-решений за 48 часов в команде",
+        desc: "Разработка инновационных IT-решений в команде за два насыщенных дня.",
     },
     {
-        id: "eco",
-        icon: "🌿",
-        name: "Эко-Баттл",
-        desc: "Экологические проекты с применением технологий",
+        id: "speakers",
+        icon: "🎤",
+        name: "Выступления спикеров",
+        desc: "Практические советы по идеям, разработке и подготовке сильного питча.",
     },
     {
-        id: "cyber",
-        icon: "🎮",
-        name: "Киберспорт (CS2)",
-        desc: "Турнир по Counter-Strike 2 среди школьных команд",
-    },
-    {
-        id: "robot",
-        icon: "🤖",
-        name: "Робототехника",
-        desc: "Конструирование и программирование роботов",
-    },
-    {
-        id: "cosplay",
-        icon: "🎭",
-        name: "Косплей",
-        desc: "Конкурс образов из мира технологий и гейминга",
+        id: "pitch",
+        icon: "🚀",
+        name: "Финальные питчи",
+        desc: "Команды представят свои проекты жюри и покажут, чего добились за хакатон.",
     },
 ]
 
-interface FormMember {
-    id: number
-    name: string
-    age: string
-}
+const programDays = [
+    {
+        id: "day-1",
+        label: "День 1",
+        title: "Открытие, вдохновение и старт",
+        items: [
+            { time: "10:00 - 10:30", title: "Регистрация участников, welcome coffee" },
+            {
+                time: "10:30 - 11:00",
+                title: "Торжественное открытие",
+                details: [
+                    "приветствие организаторов",
+                    "правила и критерии оценки",
+                    "презентация треков",
+                ],
+            },
+            {
+                time: "11:00 - 11:30",
+                title: "🎤 Малабакиев Рамзан",
+                subtitle: "Как генерировать идеи?",
+            },
+            {
+                time: "11:30 - 12:00",
+                title: "🎤 Асанов Курманбек",
+                subtitle: "Как быстро вести разработку?",
+            },
+            {
+                time: "12:00 - 12:30",
+                title: "🎤 Сартов Ахмед",
+                subtitle: "10 советов по Pitch Deck",
+            },
+            { time: "12:30 - 12:50", title: "Q&A и ответы на вопросы" },
+            { time: "12:50 - 13:50", title: "Обед" },
+            {
+                time: "13:50 - 20:00",
+                title: "💻 Работа над проектами",
+                subtitle: "Первый sprint",
+            },
+        ],
+    },
+    {
+        id: "day-2",
+        label: "День 2",
+        title: "Финал и закрытие",
+        items: [
+            { time: "10:00 - 10:30", title: "Последние доработки" },
+            {
+                time: "10:30 - 13:30",
+                title: "🎤 Финальные питчи команд",
+                subtitle: "3 часа презентаций",
+            },
+            { time: "13:30 - 14:00", title: "Совещание жюри" },
+            { time: "14:00 - 14:30", title: "🏆 Награждение победителей" },
+            { time: "14:30 - 15:00", title: "Закрытие, фото, networking" },
+        ],
+    },
+]
 
 export default function LandingPage() {
-    const [institution, setInstitution] = useState("")
-    const [leaderName, setLeaderName] = useState("")
-    const [leaderPhone, setLeaderPhone] = useState("")
-    const [selectedEvent, setSelectedEvent] = useState("")
-    const [teamName, setTeamName] = useState("")
-    const [members, setMembers] = useState<FormMember[]>([])
-    const [submitting, setSubmitting] = useState(false)
-    const [submitted, setSubmitted] = useState(false)
-
-    const addMember = () => {
-        setMembers((prev) => [
-            ...prev,
-            { id: Date.now(), name: "", age: "" },
-        ])
-    }
-
-    const removeMember = (id: number) => {
-        setMembers((prev) => prev.filter((m) => m.id !== id))
-    }
-
-    const updateMember = (id: number, field: "name" | "age", value: string) => {
-        setMembers((prev) =>
-            prev.map((m) => (m.id === id ? { ...m, [field]: value } : m))
-        )
-    }
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setSubmitting(true)
-
-        try {
-            // Insert registration
-            const { data: reg, error: regError } = await supabase
-                .from("registrations")
-                .insert({
-                    institution,
-                    leader_name: leaderName,
-                    leader_phone: leaderPhone,
-                    event: selectedEvent,
-                    team_name: teamName || null,
-                })
-                .select("id")
-                .single()
-
-            if (regError) throw regError
-
-            // Insert team members if any
-            if (members.length > 0 && reg) {
-                const membersData = members
-                    .filter((m) => m.name.trim())
-                    .map((m) => ({
-                        registration_id: reg.id,
-                        name: m.name,
-                        age: parseInt(m.age) || 0,
-                    }))
-
-                if (membersData.length > 0) {
-                    const { error: memError } = await supabase
-                        .from("team_members")
-                        .insert(membersData)
-
-                    if (memError) throw memError
-                }
-            }
-
-            setSubmitted(true)
-            // Reset form
-            setInstitution("")
-            setLeaderName("")
-            setLeaderPhone("")
-            setSelectedEvent("")
-            setTeamName("")
-            setMembers([])
-        } catch (err) {
-            console.error("Submit error:", err)
-            alert("Ошибка при отправке. Попробуйте ещё раз.")
-        } finally {
-            setSubmitting(false)
-        }
-    }
-
     return (
         <>
-            {/* HEADER */}
             <header className="header">
                 <div className="header-inner">
-                    <a href="#" className="header-logo">
+                    <a href="#hero" className="header-logo">
                         <span className="logo-dot" />
                         TECHNOFEST
                     </a>
                     <nav className="header-nav">
-                        <a href="#events">Мероприятия</a>
-                        <a href="#register">Регистрация</a>
+                        <a href="#events">Формат</a>
+                        <a href="#program">Программа</a>
                     </nav>
                 </div>
             </header>
 
-            {/* HERO */}
             <section className="hero" id="hero">
                 <div className="hero-bg">
                     <div className="hero-glow-1" />
@@ -147,48 +101,46 @@ export default function LandingPage() {
                 <div className="hero-content">
                     <div className="hero-badge">
                         <span className="dot" />
-                        Регистрация открыта
+                        Двухдневная программа TECHNOFEST
                     </div>
                     <h1 className="hero-title">
                         <span className="accent">TECHNO</span> FEST
                     </h1>
                     <div className="hero-year">2 0 2 6</div>
                     <p className="hero-description">
-                        Крупнейший IT-фестиваль для школьников 9 и 11 классов.
-                        Пять направлений — одна цель: раскрыть твой потенциал
-                        в мире технологий.
+                        Открытие, сильные спикеры, работа над проектами и финальные питчи в
+                        одном большом IT-хакатоне.
                     </p>
                     <div className="hero-meta">
                         <div className="hero-meta-item">
-                            <span className="hero-meta-value">9–11</span>
-                            <span className="hero-meta-label">Апрель</span>
+                            <span className="hero-meta-value">2</span>
+                            <span className="hero-meta-label">Дня</span>
                         </div>
                         <div className="hero-meta-item">
-                            <span className="hero-meta-value">5</span>
-                            <span className="hero-meta-label">Мероприятий</span>
+                            <span className="hero-meta-value">3</span>
+                            <span className="hero-meta-label">Спикера</span>
                         </div>
                         <div className="hero-meta-item">
-                            <span className="hero-meta-value">9 и 11</span>
-                            <span className="hero-meta-label">Классы</span>
+                            <span className="hero-meta-value">10:00</span>
+                            <span className="hero-meta-label">Старт</span>
                         </div>
                     </div>
                     <div className="hero-cta">
-                        <a href="#register" className="btn-primary">
-                            Зарегистрироваться
+                        <a href="#program" className="btn-primary">
+                            Смотреть программу
                             <span>→</span>
                         </a>
                     </div>
                 </div>
             </section>
 
-            {/* EVENTS */}
             <section className="events-section" id="events">
                 <div className="section-header">
-                    <span className="section-tag">Программа</span>
-                    <h2 className="section-title">Мероприятия фестиваля</h2>
+                    <span className="section-tag">Формат</span>
+                    <h2 className="section-title">Что ждёт участников</h2>
                 </div>
                 <div className="events-grid">
-                    {EVENTS.map((event) => (
+                    {events.map((event) => (
                         <div key={event.id} className="event-card" data-event={event.id}>
                             <div className="event-icon-wrap">{event.icon}</div>
                             <h3 className="event-name">{event.name}</h3>
@@ -198,185 +150,57 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* REGISTRATION */}
-            <section className="registration-section" id="register">
+            <section className="program-section" id="program">
                 <div className="section-header">
-                    <span className="section-tag">Заявка</span>
-                    <h2 className="section-title">Регистрация</h2>
+                    <span className="section-tag">Таймлайн</span>
+                    <h2 className="section-title">Программа хакатона</h2>
                 </div>
 
-                {submitted ? (
-                    <div className="reg-form" style={{ textAlign: "center", padding: "60px 36px" }}>
-                        <div style={{ fontSize: "3rem", marginBottom: "16px" }}>✅</div>
-                        <h3 style={{ fontSize: "1.4rem", fontWeight: 700, color: "#fff", marginBottom: "8px" }}>
-                            Заявка отправлена!
-                        </h3>
-                        <p style={{ color: "var(--text-secondary)", marginBottom: "24px" }}>
-                            Мы свяжемся с вами в ближайшее время.
-                        </p>
-                        <button
-                            className="btn-submit"
-                            style={{ maxWidth: "300px", margin: "0 auto" }}
-                            onClick={() => setSubmitted(false)}
-                        >
-                            Отправить ещё одну заявку
-                        </button>
-                    </div>
-                ) : (
-                    <form className="reg-form" onSubmit={handleSubmit}>
-                        <div className="form-group">
-                            <label className="form-label">Название учреждения</label>
-                            <input
-                                className="form-input"
-                                type="text"
-                                placeholder="Например: Общеобразовательная школа №123 (г. Бишкек)"
-                                value={institution}
-                                onChange={(e) => setInstitution(e.target.value)}
-                                required
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label className="form-label">ФИО руководителя</label>
-                            <input
-                                className="form-input"
-                                type="text"
-                                placeholder="Асанов Азамат Асанович"
-                                value={leaderName}
-                                onChange={(e) => setLeaderName(e.target.value)}
-                                required
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label className="form-label">Телефон руководителя</label>
-                            <input
-                                className="form-input"
-                                type="tel"
-                                placeholder="+996 700 123 456"
-                                value={leaderPhone}
-                                onChange={(e) => setLeaderPhone(e.target.value)}
-                                required
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label className="form-label">Мероприятие</label>
-                            <select
-                                className="form-select"
-                                value={selectedEvent}
-                                onChange={(e) => setSelectedEvent(e.target.value)}
-                                required
-                            >
-                                <option value="" disabled>
-                                    Выберите мероприятие
-                                </option>
-                                {EVENTS.map((event) => (
-                                    <option key={event.id} value={event.id}>
-                                        {event.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className="form-divider" />
-
-                        <div className="form-group">
-                            <label className="form-label">
-                                Название команды <span className="optional">(опционально)</span>
-                            </label>
-                            <input
-                                className="form-input"
-                                type="text"
-                                placeholder="Например: Team Alpha"
-                                value={teamName}
-                                onChange={(e) => setTeamName(e.target.value)}
-                            />
-                        </div>
-
-                        <div className="form-divider" />
-
-                        <div className="form-group">
-                            <div className="members-header">
-                                <label className="form-label" style={{ margin: 0 }}>
-                                    Участники команды
-                                </label>
-                                <button
-                                    type="button"
-                                    className="btn-icon"
-                                    onClick={addMember}
-                                    title="Добавить участника"
-                                >
-                                    +
-                                </button>
+                <div className="timeline-days">
+                    {programDays.map((day) => (
+                        <article key={day.id} className="timeline-day">
+                            <div className="timeline-day-header">
+                                <span className="timeline-day-label">{day.label}</span>
+                                <h3 className="timeline-day-title">{day.title}</h3>
                             </div>
 
-                            {members.length === 0 && (
-                                <p className="members-empty">
-                                    Нажмите «+» чтобы добавить участников
-                                </p>
-                            )}
-
-                            {members.map((member, index) => (
-                                <div key={member.id} className="member-entry">
-                                    <input
-                                        className="form-input"
-                                        type="text"
-                                        placeholder={`ФИО участника ${index + 1}`}
-                                        value={member.name}
-                                        onChange={(e) =>
-                                            updateMember(member.id, "name", e.target.value)
-                                        }
-                                    />
-                                    <input
-                                        className="form-input"
-                                        type="number"
-                                        placeholder="Возраст"
-                                        min="14"
-                                        max="18"
-                                        value={member.age}
-                                        onChange={(e) =>
-                                            updateMember(member.id, "age", e.target.value)
-                                        }
-                                    />
-                                    <button
-                                        type="button"
-                                        className="btn-icon remove"
-                                        onClick={() => removeMember(member.id)}
-                                        title="Удалить участника"
+                            <div className="timeline-list">
+                                {day.items.map((item) => (
+                                    <div
+                                        key={`${day.id}-${item.time}-${item.title}`}
+                                        className="timeline-item"
                                     >
-                                        ×
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-
-                        <button type="submit" className="btn-submit" disabled={submitting}>
-                            {submitting ? "Отправка..." : "Отправить заявку"}
-                        </button>
-                    </form>
-                )}
+                                        <div className="timeline-time">{item.time}</div>
+                                        <div className="timeline-dot" />
+                                        <div className="timeline-content">
+                                            <h4 className="timeline-title">{item.title}</h4>
+                                            {item.subtitle && (
+                                                <p className="timeline-subtitle">{item.subtitle}</p>
+                                            )}
+                                            {item.details && (
+                                                <ul className="timeline-details">
+                                                    {item.details.map((detail) => (
+                                                        <li key={detail}>{detail}</li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </article>
+                    ))}
+                </div>
             </section>
 
-            {/* COMING SOON */}
-            <section className="coming-soon-section">
-                <div className="coming-soon-text">Скоро...</div>
-                <p className="coming-soon-sub">
-                    Подробная информация будет добавлена в ближайшее время
-                </p>
-            </section>
-
-            {/* FOOTER */}
             <footer className="footer">
                 <div className="footer-inner">
                     <span className="footer-logo">TECHNOFEST</span>
-                    <span className="footer-text">
-                        9 – 11 апрель 2026 · IT-фестиваль для школьников
-                    </span>
+                    <span className="footer-text">IT-хакатон с программой на 2 дня</span>
                     <div className="footer-links">
                         <a href="#hero">Главная</a>
-                        <a href="#events">Мероприятия</a>
-                        <a href="#register">Регистрация</a>
+                        <a href="#events">Формат</a>
+                        <a href="#program">Программа</a>
                     </div>
                 </div>
             </footer>
